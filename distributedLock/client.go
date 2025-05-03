@@ -13,65 +13,33 @@ type Client struct {
 }
 
 type ClientOptions struct {
-	Network        string
-	Addr           string
-	Password       string
-	DB             int           // redis数据库
-	PoolSize       int           // 连接池大小
-	MinIdleConns   int           // 最小空闲数
-	IdleTimeout    time.Duration //
-	PoolTimeout    time.Duration // 连接池最大
-	MaxActiveConns int
-	Wait           bool
+	Network     string
+	Addr        string
+	Password    string
+	DB          int           // redis数据库
+	PoolSize    int           // 连接池提供的连接数量
+	MinIdleConn int           // 最小空闲数
+	DialTimeout time.Duration // 建立链接的超时
+	PoolTimeout time.Duration // 从连接池获取连接的最大等待时间
 }
 
-type ClientOption func(*ClientOptions)
-
 // NewClient 函数式可选模式
-func NewClient(address, password string, opts ...ClientOption) *Client {
-	options := &ClientOptions{
-		Addr:     address,
-		Password: password,
-		Network:  "tcp",
-	}
-
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	// 初始化数据
-	repairClientOptions(options)
-
+func NewClient(options *ClientOptions) *Client {
+	// 基础的配置
 	redisOpts := &redis.Options{
 		Network:      options.Network,
 		Addr:         options.Addr,
 		Password:     options.Password,
-		DB:           options.DB,
+		DB:           0,
 		PoolSize:     options.PoolSize,
-		MinIdleConns: options.MinIdleConns, // 连接池中保持的最小空闲连接数
-		DialTimeout:  options.IdleTimeout,  // 建立链接的超时
-		PoolTimeout:  options.PoolTimeout,  // 从连接池获取连接超时
+		MinIdleConns: options.MinIdleConn, // 连接池中保持的最小空闲连接数
+		DialTimeout:  options.DialTimeout, // 建立链接的超时
+		PoolTimeout:  options.PoolTimeout, // 从连接池获取连接超时
 	}
-
+	// 获取服务端
 	client := redis.NewClient(redisOpts)
 	return &Client{
 		client: client,
-	}
-}
-
-func repairClientOptions(opts *ClientOptions) {
-	if opts.PoolSize <= 0 {
-		opts.PoolSize = 10
-	}
-	if opts.IdleTimeout <= 0 {
-		opts.IdleTimeout = 300 * time.Second
-	}
-	if opts.PoolTimeout <= 0 {
-		if opts.Wait {
-			opts.PoolTimeout = 30 * time.Second
-		} else {
-			opts.PoolTimeout = 0
-		}
 	}
 }
 

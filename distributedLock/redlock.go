@@ -18,7 +18,7 @@ const (
 	WatchDogWorkStepSeconds = 10
 )
 
-const RedisLockKeyPrefix = "REDIS_LOCK_PREFIX_"
+const RedisLockPrefix = "REDIS_LOCK_PREFIX_"
 
 // LuaCheckAndDeleteDistributionLock 判断是否拥有分布式锁的归属权，是则删除
 const LuaCheckAndDeleteDistributionLock = `
@@ -96,10 +96,14 @@ func repairLock(o *LockOptions) {
 }
 
 type LockOptions struct {
-	isBlock             bool
+	// 是否开启阻塞
+	isBlock bool
+	// 阻塞的时间
 	blockWaitingSeconds int64
-	expireSeconds       int64
-	watchDogMode        bool
+	// 过期时间
+	expireSeconds int64
+	// 看门狗机制
+	watchDogMode bool
 }
 
 type RedisLock struct {
@@ -165,18 +169,21 @@ func (r *RedisLock) Lock(ctx context.Context) (err error) {
 
 func (r *RedisLock) tryLock(ctx context.Context) error {
 	// 首先查询锁是否属于自己
-	reply, err := r.client.SetNEX(ctx, r.getLockKey(), r.token, r.expireSeconds)
+	reply, err := r.client.SetNEX(ctx, r.getLockKey(), r.getLockValue(), r.expireSeconds)
 	if err != nil {
 		return err
 	}
 	if reply != true {
-		return fmt.Errorf("reply: %d, err: %w", reply, ErrLockAcquiredByOthers)
+		return fmt.Errorf("reply: %v, err: %w", reply, ErrLockAcquiredByOthers)
 	}
 
 	return nil
 }
 func (r *RedisLock) getLockKey() string {
-	return RedisLockKeyPrefix + r.token
+	return r.key
+}
+func (r *RedisLock) getLockValue() string {
+	return RedisLockPrefix + r.token
 }
 func (r *RedisLock) blockingLock(ctx context.Context) error {
 	// 阻塞模式等锁时间上限
@@ -280,7 +287,7 @@ func (r *RedisLock) Unlock(ctx context.Context) (err error) {
 
 // DelayExpire 更新锁的过期时间，基于 lua 脚本实现操作原子性
 func (r *RedisLock) DelayExpire(ctx context.Context, expireSeconds int64) error {
-	keysAndArgs := []interface{}{r.getLockKey(), r.token, expireSeconds}
+	keysAndArgs := []interface{}{r.getLockKey(), r.getLockValue(), expireSeconds}
 	reply, err := r.client.Eval(ctx, LuaCheckAndExpireDistributionLock, 1, keysAndArgs)
 	if err != nil {
 		return err
