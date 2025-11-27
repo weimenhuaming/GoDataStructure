@@ -2,9 +2,9 @@ package distributedLock
 
 import (
 	"context"
-	"errors"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Client Redis 封装一个新的客户端（将SetNEX和Eval暴露出来）
@@ -49,24 +49,6 @@ func (c *Client) SetNEX(ctx context.Context, key, value string, expireSeconds in
 }
 
 // Eval 执行Lua脚本
-func (c *Client) Eval(ctx context.Context, script string, keyCount int, keysAndArgs []interface{}) (interface{}, error) {
-	keys := make([]string, 0, keyCount)
-	args := make([]interface{}, 0, len(keysAndArgs)-keyCount)
-
-	for i := 0; i < keyCount; i++ {
-		if i >= len(keysAndArgs) {
-			return nil, errors.New("insufficient keys in keysAndArgs")
-		}
-		key, ok := keysAndArgs[i].(string)
-		if !ok {
-			return nil, errors.New("key is not a string")
-		}
-		keys = append(keys, key)
-	}
-
-	if len(keysAndArgs) > keyCount {
-		args = keysAndArgs[keyCount:]
-	}
-
-	return c.client.Eval(ctx, script, keys, args...).Result()
+func (c *Client) Eval(ctx context.Context, script string, keys []string, args ...interface{}) (interface{}, error) {
+	return c.client.Eval(ctx, script, keys, args).Result()
 }

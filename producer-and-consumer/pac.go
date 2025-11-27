@@ -1,4 +1,4 @@
-package main
+package producer_and_consumer
 
 import (
 	"fmt"
