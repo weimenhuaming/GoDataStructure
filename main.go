@@ -57,4 +57,5 @@ func consumer(id int, buffer <-chan int, wg *sync.WaitGroup) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000))) // 模拟消费耗时
 	}
 	fmt.Printf("Consumer %d exit\n", id)
+
 }
