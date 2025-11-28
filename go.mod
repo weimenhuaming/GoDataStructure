@@ -1,4 +1,4 @@
-module github.com/weimenhuaming/GoDataStructure // 正确路径（和引用路径一致）
+module github.com/weimenhuaming/GoDataStructure
 
 go 1.24.1
 
